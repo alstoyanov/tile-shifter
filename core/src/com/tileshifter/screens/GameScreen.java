@@ -346,24 +346,13 @@ public class GameScreen implements Screen {
             drawRotateButtons();
         }
         
-        // Removed: Old rotate mode indicators
-        // if (gameMode == GameMode.ROTATE) {
-        //     drawRotateIndicators();
-        // }
-        
         // Draw win message if needed
         if (showWinMessage) {
             drawWinMessage();
         }
         
-        // Draw game info and instructions
-        // game.font.draw(game.batch, "Image: " + imageName, 20, 50); // Removed filename display
-        // game.font.draw(game.batch, "Click tiles adjacent to empty space to move them", 20, 30);
-        // Removed static instructions at the bottom
-        // Show move count or other game stats
-        if (!showWinMessage) {
-            // game.font.draw(game.batch, "Arrange tiles to complete the image", 20, 10); // Removed final instruction line
-        }
+        // End the main game.batch here, before any overlays are drawn, so overlays can manage their own batches.
+        game.batch.end(); 
 
         // New: Draw full image or instructions overlay
         if (showingFullImage) {
@@ -371,8 +360,6 @@ public class GameScreen implements Screen {
         } else if (showingInstructions) {
             drawInstructionsOverlay();
         }
-        
-        game.batch.end();
         
         // Handle input (only if no overlay is active)
         if (!showingFullImage && !showingInstructions) {
@@ -759,12 +746,15 @@ public class GameScreen implements Screen {
 
     // New: Draws the full puzzle image as an overlay
     private void drawFullImageOverlay() {
+        game.batch.begin(); // Start batch for overlay
+        game.batch.setProjectionMatrix(game.camera.combined); // Ensure correct projection for SpriteBatch
         game.batch.setColor(1, 1, 1, 0.8f); // Slightly transparent overlay
         game.batch.draw(puzzleTexture, 
             TileShiftGame.VIRTUAL_WIDTH / 2 - puzzleTexture.getWidth() / 2, 
             TileShiftGame.VIRTUAL_HEIGHT / 2 - puzzleTexture.getHeight() / 2,
             puzzleTexture.getWidth(), puzzleTexture.getHeight());
         game.batch.setColor(1, 1, 1, 1f); // Reset color
+        game.batch.end(); // End batch for overlay
     }
 
     // New: Draws game instructions as an overlay
@@ -776,8 +766,8 @@ public class GameScreen implements Screen {
         shapeRenderer.rect(0, 0, TileShiftGame.VIRTUAL_WIDTH, TileShiftGame.VIRTUAL_HEIGHT);
         shapeRenderer.end();
 
-        game.batch.begin(); // Start SpriteBatch for text and brand logo
-
+        game.batch.begin(); // Start batch for overlay logo and text
+        game.batch.setProjectionMatrix(game.camera.combined); // Ensure correct projection for SpriteBatch
         // Draw the brand logo above the instructions text
         if (brandLogo != null) {
             float logoWidth = brandLogo.getWidth() / 1.5f; // Scale down for instructions screen
@@ -791,7 +781,7 @@ public class GameScreen implements Screen {
         
         if (gameMode == GameMode.ROTATE) {
             instructionsText = "HOW TO PLAY (ROTATE MODE):\n\n" +
-                              "1. Click the circular rotation icon buttons to rotate the adjacent 2x2 sub-board clockwise.\n" +
+                              "1. Click the rotation icon buttons to rotate the adjacent 2x2.\n" +
                               "2. Five overlapping 2x2 sub-boards can be rotated:\n" +
                               "   - Top-Left, Top-Right, Bottom-Left, Bottom-Right, Center\n" +
                               "3. Arrange all tiles to complete the image.\n" +
@@ -810,7 +800,7 @@ public class GameScreen implements Screen {
                               "1. Click a tile adjacent to the empty space to move it.\n" +
                               "2. Arrange all tiles to complete the image.\n" +
                               "3. Use \"Reset\" to shuffle for a new game.\n" +
-                              "4. Use \"Back\" to return to image selection.";
+                              "4. Use \"Back\" to return to image selection.\n\n";
         }
         
         // Calculate text position to center it
@@ -819,7 +809,7 @@ public class GameScreen implements Screen {
         float textY = TileShiftGame.VIRTUAL_HEIGHT - 200 - layout.height / 2; // Adjusted text position lower
 
         game.font.draw(game.batch, instructionsText, textX, textY);
-        game.font.draw(game.batch, "\n\nTap anywhere to close", textX, textY - layout.height - 30);
+        game.batch.end(); // End batch for overlay
     }
     
 }
