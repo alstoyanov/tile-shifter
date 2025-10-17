@@ -4,12 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer; // New Import
 import com.tileshifter.GameMode;
 import com.tileshifter.PuzzleBoard;
@@ -26,7 +23,6 @@ public class GameScreen implements Screen {
     private GameMode gameMode;
     private PuzzleBoard puzzleBoard;
     private Texture puzzleTexture;
-    private String imageName;
     private Texture brandLogo; // New: To display Mytholore.jpg on instructions screen
     
     // UI elements
@@ -62,7 +58,6 @@ public class GameScreen implements Screen {
     private float boardStartX, boardStartY;
     private float tileSize;
     private static final float BOARD_PADDING = 50f;
-    private static final float PADDING = 20f; // New: Consistent padding value
     
     // Win state
     private boolean showWinMessage = false;
@@ -74,7 +69,6 @@ public class GameScreen implements Screen {
     
     public GameScreen(TileShiftGame game, String imageName, GameMode gameMode) {
         this.game = game;
-        this.imageName = imageName;
         this.gameMode = gameMode;
         
         // Load the puzzle image
@@ -463,16 +457,7 @@ public class GameScreen implements Screen {
             currentButtonX + currentButtonWidth / 2 - textLayout.width / 2,
             currentButtonY + currentButtonHeight / 2 + textLayout.height / 2);
     }
-    
-    private void drawColoredText(Rectangle bounds, String text, Color color) {
-        game.font.setColor(color);
-        com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, text);
-        float textX = bounds.x + bounds.width / 2 - layout.width / 2;
-        float textY = bounds.y + bounds.height / 2 + layout.height / 2;
-        game.font.draw(game.batch, text, textX, textY);
-        game.font.setColor(Color.WHITE); // Reset to default color
-    }
-    
+
     private void drawPuzzleBoard() {
         // Draw all tiles without unnecessary borders
         for (int y = 0; y < PuzzleBoard.BOARD_SIZE; y++) {
