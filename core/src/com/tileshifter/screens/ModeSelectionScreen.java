@@ -26,6 +26,7 @@ public class ModeSelectionScreen implements Screen {
     private static final float PRESS_ANIMATION_DURATION = 0.1f;
 
     private ShapeRenderer shapeRenderer; // New: For drawing 3D button effects
+    private Rectangle hoveredButton = null; // New: To track the currently hovered button
     
     private static final float BUTTON_WIDTH = 300f; // Larger button width
     private static final float BUTTON_HEIGHT = 100f; // Larger button height
@@ -51,8 +52,8 @@ public class ModeSelectionScreen implements Screen {
         float centerX = TileShiftGame.VIRTUAL_WIDTH / 2;
         // Calculate total height of all buttons and spacing
         float totalButtonsHeight = 3 * BUTTON_HEIGHT + 2 * BUTTON_SPACING;
-        // Center the group of buttons vertically
-        float startY = (TileShiftGame.VIRTUAL_HEIGHT / 2) + (totalButtonsHeight / 2) - BUTTON_HEIGHT;
+        // Adjusted Y-coordinate for the group of buttons to ensure ample space below the subtitle
+        float startY = (TileShiftGame.VIRTUAL_HEIGHT / 2) + (totalButtonsHeight / 2) - BUTTON_HEIGHT - 60; // Adjusted significantly lower
         
         classicButton = new Rectangle(
             centerX - BUTTON_WIDTH / 2,
@@ -92,6 +93,21 @@ public class ModeSelectionScreen implements Screen {
             }
         }
 
+        // Update hovered button
+        Vector3 mouseCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        game.viewport.unproject(mouseCoords);
+        float mouseX = mouseCoords.x;
+        float mouseY = mouseCoords.y;
+
+        hoveredButton = null; // Reset hovered button
+        if (classicButton.contains(mouseX, mouseY)) {
+            hoveredButton = classicButton;
+        } else if (rotateButton.contains(mouseX, mouseY)) {
+            hoveredButton = rotateButton;
+        } else if (shiftButton.contains(mouseX, mouseY)) {
+            hoveredButton = shiftButton;
+        }
+
         // Clear screen
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -114,14 +130,14 @@ public class ModeSelectionScreen implements Screen {
         com.badlogic.gdx.graphics.g2d.GlyphLayout titleLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, title);
         game.font.draw(game.batch, title, 
             TileShiftGame.VIRTUAL_WIDTH / 2 - titleLayout.width / 2, 
-            TileShiftGame.VIRTUAL_HEIGHT - 50);
+            TileShiftGame.VIRTUAL_HEIGHT - 30); // Positioned high enough
         
         // Draw subtitle
         String subtitle = "Select Game Mode:";
         com.badlogic.gdx.graphics.g2d.GlyphLayout subtitleLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, subtitle);
         game.font.draw(game.batch, subtitle, 
             TileShiftGame.VIRTUAL_WIDTH / 2 - subtitleLayout.width / 2, 
-            TileShiftGame.VIRTUAL_HEIGHT - 100);
+            TileShiftGame.VIRTUAL_HEIGHT - 100); // Positioned clearly below title
         
         // Redraw button titles and descriptions over the 3D buttons (within SpriteBatch)
         drawButtonText(classicButton, "Classic", "Slide tiles into empty space");
@@ -141,32 +157,46 @@ public class ModeSelectionScreen implements Screen {
         float currentButtonHeight = button.height;
         float currentButtonDepth = BUTTON_DEPTH;
 
-        // Apply animation if this button is currently pressed
+        // Apply hover effect
+        if (button == hoveredButton && pressedButton == null) {
+            // Slightly scale up or change color on hover
+            float hoverScale = 1.02f; // 2% larger
+            currentButtonWidth = button.width * hoverScale;
+            currentButtonHeight = button.height * hoverScale;
+            currentButtonX = button.x + (button.width - currentButtonWidth) / 2;
+            currentButtonY = button.y + (button.height - currentButtonHeight) / 2;
+            // No change to depth on hover, only visual cues for top face and text
+        }
+
+        // Apply press animation if this button is currently pressed
         if (button == pressedButton) {
-            float scale = 1.0f - (0.05f * (pressTimer / PRESS_ANIMATION_DURATION)); // Scale down by up to 5%
+            float scale = 1.0f - (0.07f * (pressTimer / PRESS_ANIMATION_DURATION)); // Scale down by up to 7% (more noticeable)
             currentButtonWidth = button.width * scale;
             currentButtonHeight = button.height * scale;
             currentButtonX = button.x + (button.width - currentButtonWidth) / 2;
             currentButtonY = button.y + (button.height - currentButtonHeight) / 2;
-            // Scale depth more significantly, e.g., to 30% of original, and ensure a clear shift down
-            currentButtonDepth = BUTTON_DEPTH * (1.0f - (0.7f * (pressTimer / PRESS_ANIMATION_DURATION)));
+            currentButtonDepth = BUTTON_DEPTH * (1.0f - (0.8f * (pressTimer / PRESS_ANIMATION_DURATION))); // Scale depth to 20% (more significant)
             currentButtonY -= (BUTTON_DEPTH - currentButtonDepth); // Shift down to simulate pressing
         }
 
         // Draw the bottom/back face (darkest) - this creates the deepest shadow
-        shapeRenderer.setColor(0.1f, 0.15f, 0.2f, 1.0f); // Very dark color for the deepest part
+        shapeRenderer.setColor(0.05f, 0.1f, 0.15f, 1.0f); // Even darker color for deepest part
         shapeRenderer.rect(currentButtonX + currentButtonDepth, currentButtonY - currentButtonDepth, currentButtonWidth, currentButtonHeight);
 
         // Draw the right side face
-        shapeRenderer.setColor(0.2f, 0.3f, 0.4f, 1.0f); // Medium dark for the right side
-        shapeRenderer.rect(currentButtonX + currentButtonWidth, currentButtonY - currentButtonDepth, currentButtonDepth, currentButtonHeight);
+        shapeRenderer.setColor(0.15f, 0.25f, 0.35f, 1.0f); // Darker side color
+        shapeRenderer.rect(currentButtonX + currentButtonWidth, currentButtonY - currentButtonDepth, currentButtonDepth, currentButtonHeight + currentButtonDepth);
 
         // Draw the bottom side face
-        shapeRenderer.setColor(0.25f, 0.35f, 0.45f, 1.0f); // Slightly lighter than right for bottom side
-        shapeRenderer.rect(currentButtonX + currentButtonDepth, currentButtonY - currentButtonDepth, currentButtonWidth, currentButtonDepth);
+        shapeRenderer.setColor(0.2f, 0.3f, 0.4f, 1.0f); // Slightly lighter than right for bottom side
+        shapeRenderer.rect(currentButtonX, currentButtonY - currentButtonDepth, currentButtonWidth + currentButtonDepth, currentButtonDepth);
 
         // Draw the top face (main button color) - this is the interactive part
-        shapeRenderer.setColor(0.3f, 0.4f, 0.5f, 1.0f); // Darker blue-grey color
+        float topFaceColorFactor = 1.0f;
+        if (button == hoveredButton && pressedButton == null) {
+            topFaceColorFactor = 1.2f; // Brighter on hover
+        }
+        shapeRenderer.setColor(0.3f * topFaceColorFactor, 0.4f * topFaceColorFactor, 0.5f * topFaceColorFactor, 1.0f);
         shapeRenderer.rect(currentButtonX, currentButtonY, currentButtonWidth, currentButtonHeight);
 
         // Note: Text rendering happens in SpriteBatch, which is started after shapeRenderer.end()
@@ -180,13 +210,22 @@ public class ModeSelectionScreen implements Screen {
         float currentButtonHeight = button.height;
         float currentButtonDepth = BUTTON_DEPTH; // This needs to be consistent for text alignment
 
+        // Apply hover effect (for text position)
+        if (button == hoveredButton && pressedButton == null) {
+            float hoverScale = 1.02f;
+            currentButtonWidth = button.width * hoverScale;
+            currentButtonHeight = button.height * hoverScale;
+            currentButtonX = button.x + (button.width - currentButtonWidth) / 2;
+            currentButtonY = button.y + (button.height - currentButtonHeight) / 2;
+        }
+
         if (button == pressedButton) {
-            float scale = 1.0f - (0.05f * (pressTimer / PRESS_ANIMATION_DURATION));
+            float scale = 1.0f - (0.07f * (pressTimer / PRESS_ANIMATION_DURATION));
             currentButtonWidth = button.width * scale;
             currentButtonHeight = button.height * scale;
             currentButtonX = button.x + (button.width - currentButtonWidth) / 2;
             currentButtonY = button.y + (button.height - currentButtonHeight) / 2;
-            currentButtonDepth = BUTTON_DEPTH * (1.0f - (0.7f * (pressTimer / PRESS_ANIMATION_DURATION)));
+            currentButtonDepth = BUTTON_DEPTH * (1.0f - (0.8f * (pressTimer / PRESS_ANIMATION_DURATION)));
             currentButtonY -= (BUTTON_DEPTH - currentButtonDepth); // Shift down
         }
 

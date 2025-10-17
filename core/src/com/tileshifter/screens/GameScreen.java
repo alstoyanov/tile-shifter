@@ -10,6 +10,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer; // New Import
 import com.tileshifter.GameMode;
 import com.tileshifter.PuzzleBoard;
 import com.tileshifter.RotatePuzzleBoard;
@@ -45,11 +46,23 @@ public class GameScreen implements Screen {
     private Rectangle[] rotateButtons; // 5 buttons for the 5 sub-boards
     private Texture circleButtonTexture; // Texture for circular buttons
     private Texture rotationIconTexture; // New: Texture for rotation icon
-    
+
+    // New 3D button and animation fields
+    private ShapeRenderer shapeRenderer; // For drawing 3D button effects
+    private Texture solidBackgroundTexture; // For general solid backgrounds
+    private Rectangle pressedButton = null;
+    private float pressTimer = 0f;
+    private Rectangle hoveredButton = null; // New: To track the currently hovered button
+
+    private static final float BUTTON_DEPTH = 8f; // Depth for 3D effect
+    private static final float PRESS_ANIMATION_DURATION = 0.1f;
+    private static final float BUTTON_TOP_MARGIN = 30f; // New: Consistent top margin for buttons
+
     // Board rendering properties
     private float boardStartX, boardStartY;
     private float tileSize;
     private static final float BOARD_PADDING = 50f;
+    private static final float PADDING = 20f; // New: Consistent padding value
     
     // Win state
     private boolean showWinMessage = false;
@@ -70,6 +83,14 @@ public class GameScreen implements Screen {
         // Load the brand logo for the instructions screen
         brandLogo = new Texture(Gdx.files.internal("images/Mytholore.jpg"));
         
+        // Initialize ShapeRenderer and solidBackgroundTexture
+        shapeRenderer = new ShapeRenderer();
+        com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.WHITE);
+        pixmap.fill();
+        solidBackgroundTexture = new Texture(pixmap);
+        pixmap.dispose();
+
         // Initialize puzzle board based on game mode
         switch (gameMode) {
             case ROTATE:
@@ -86,38 +107,45 @@ public class GameScreen implements Screen {
         puzzleBoard.initializeBoard(puzzleTexture);
         
         // Create circular button texture for Rotate mode
-        com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(64, 64, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
-        pixmap.setColor(0.7f, 0.7f, 0.7f, 0.9f); // Brighter, more opaque grey
-        pixmap.fillCircle(32, 32, 30);
-        circleButtonTexture = new Texture(pixmap);
-        pixmap.dispose();
+        com.badlogic.gdx.graphics.Pixmap circlePixmap = new com.badlogic.gdx.graphics.Pixmap(64, 64, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+        circlePixmap.setColor(0.7f, 0.7f, 0.7f, 0.9f); // Brighter, more opaque grey
+        circlePixmap.fillCircle(32, 32, 30);
+        circleButtonTexture = new Texture(circlePixmap);
+        circlePixmap.dispose();
 
         // Create rotation icon texture
-        com.badlogic.gdx.graphics.Pixmap iconPixmap = new com.badlogic.gdx.graphics.Pixmap(32, 32, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
-        iconPixmap.setColor(Color.YELLOW); // Bright yellow for visibility
+        com.badlogic.gdx.graphics.Pixmap rotationIconPixmap = new com.badlogic.gdx.graphics.Pixmap(32, 32, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+        rotationIconPixmap.setColor(Color.YELLOW); // Bright yellow for visibility
         // Draw a simple clockwise arrow
-        iconPixmap.fillTriangle(16, 2, 22, 10, 10, 10); // Arrowhead
-        iconPixmap.fillRectangle(14, 10, 4, 10); // Arrow shaft
-        iconPixmap.fillCircle(16, 24, 6); // Base of arrow
-        rotationIconTexture = new Texture(iconPixmap);
-        iconPixmap.dispose();
+        rotationIconPixmap.fillTriangle(16, 2, 22, 10, 10, 10); // Arrowhead
+        rotationIconPixmap.fillRectangle(14, 10, 4, 10); // Arrow shaft
+        rotationIconPixmap.fillCircle(16, 24, 6); // Base of arrow
+        rotationIconTexture = new Texture(rotationIconPixmap);
+        rotationIconPixmap.dispose();
         
         setupUI();
         calculateBoardLayout();
     }
     
     private void setupUI() {
+        // Common button dimensions for main UI buttons
+        float uiButtonWidth = 120; // Increased width for better touch target
+        float uiButtonHeight = 50; // Increased height
+        float uiButtonSpacing = 10;
+        // Adjusted Y-coordinate for main UI buttons to be consistent and avoid overlap
+        float uiButtonY = TileShiftGame.VIRTUAL_HEIGHT - BUTTON_TOP_MARGIN - uiButtonHeight; // Adjusted to be higher
+
         // Back button (top-left)
-        backButton = new Rectangle(20, TileShiftGame.VIRTUAL_HEIGHT - 60, 100, 40);
+        backButton = new Rectangle(BOARD_PADDING, uiButtonY, uiButtonWidth, uiButtonHeight);
         
         // Reset button (top-right)
-        resetButton = new Rectangle(TileShiftGame.VIRTUAL_WIDTH - 120, TileShiftGame.VIRTUAL_HEIGHT - 60, 100, 40);
+        resetButton = new Rectangle(TileShiftGame.VIRTUAL_WIDTH - BOARD_PADDING - uiButtonWidth, uiButtonY, uiButtonWidth, uiButtonHeight);
 
         // Help button (show full image) - next to reset
-        helpButton = new Rectangle(TileShiftGame.VIRTUAL_WIDTH - 240, TileShiftGame.VIRTUAL_HEIGHT - 60, 100, 40);
+        helpButton = new Rectangle(TileShiftGame.VIRTUAL_WIDTH - BOARD_PADDING - 2 * uiButtonWidth - uiButtonSpacing, uiButtonY, uiButtonWidth, uiButtonHeight);
 
         // Instructions button - next to help
-        instructionsButton = new Rectangle(TileShiftGame.VIRTUAL_WIDTH - 360, TileShiftGame.VIRTUAL_HEIGHT - 60, 100, 40);
+        instructionsButton = new Rectangle(TileShiftGame.VIRTUAL_WIDTH - BOARD_PADDING - 3 * uiButtonWidth - 2 * uiButtonSpacing, uiButtonY, uiButtonWidth, uiButtonHeight);
         
         // Win message area (center)
         winMessageArea = new Rectangle(
@@ -254,32 +282,57 @@ public class GameScreen implements Screen {
     
     @Override
     public void render(float delta) {
-        // Update game logic
-        puzzleBoard.update(delta);
-        
-        // Check for win condition
-        if (puzzleBoard.isWon() && !showWinMessage) {
-            showWinMessage = true;
-            winMessageTimer = 0f;
+        // Update press animation timer
+        if (pressedButton != null) {
+            pressTimer += delta;
+            if (pressTimer >= PRESS_ANIMATION_DURATION) {
+                pressedButton = null;
+                pressTimer = 0f;
+            }
         }
-        
-        if (showWinMessage) {
-            winMessageTimer += delta;
+
+        // Update hovered button
+        Vector3 mouseCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        game.viewport.unproject(mouseCoords);
+        float mouseX = mouseCoords.x;
+        float mouseY = mouseCoords.y;
+
+        hoveredButton = null; // Reset hovered button
+        if (backButton.contains(mouseX, mouseY)) {
+            hoveredButton = backButton;
+        } else if (resetButton.contains(mouseX, mouseY)) {
+            hoveredButton = resetButton;
+        } else if (helpButton.contains(mouseX, mouseY)) {
+            hoveredButton = helpButton;
+        } else if (instructionsButton.contains(mouseX, mouseY)) {
+            hoveredButton = instructionsButton;
         }
-        
+
         // Clear screen
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        // Set up ShapeRenderer for 3D button drawing (sides and depth)
+        shapeRenderer.setProjectionMatrix(game.camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        // Draw main UI buttons (3D effect drawn by ShapeRenderer)
+        drawMainUIButton(backButton, "Back");
+        drawMainUIButton(resetButton, "Reset");
+        drawMainUIButton(helpButton, "Help");
+        drawMainUIButton(instructionsButton, "Inst.");
+
+        shapeRenderer.end(); // End ShapeRenderer batch
         
-        game.batch.begin();
+        game.batch.begin(); // Start SpriteBatch for text and textures rendering
         
-        // Draw UI buttons
-        drawButton(backButton, "Back");
-        drawButton(resetButton, "Reset");
-        drawButton(helpButton, "Help"); // Draw Help button
-        drawButton(instructionsButton, "Inst."); // Draw Instructions button
+        // Draw UI button texts (over the 3D buttons)
+        drawMainUIButtonText(backButton, "Back");
+        drawMainUIButtonText(resetButton, "Reset");
+        drawMainUIButtonText(helpButton, "Help");
+        drawMainUIButtonText(instructionsButton, "Inst.");
         
-        // Draw shift mode arrow buttons
+        // Draw shift mode arrow buttons (these don't have the full 3D effect yet)
         if (gameMode == GameMode.SHIFT) {
             drawShiftButtons();
         }
@@ -330,6 +383,7 @@ public class GameScreen implements Screen {
     }
     
     private void drawButton(Rectangle button, String text) {
+        // This method will no longer be used for main UI buttons, but might be for shift/rotate arrows
         // Draw button text centered without border artifacts
         com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, text);
         float textX = button.x + button.width / 2 - layout.width / 2;
@@ -338,6 +392,91 @@ public class GameScreen implements Screen {
         game.font.draw(game.batch, text, textX, textY);
     }
 
+    // New: Draws a 3D button structure with hover/press animation
+    private void drawMainUIButton(Rectangle button, String text) {
+        float currentButtonX = button.x;
+        float currentButtonY = button.y;
+        float currentButtonWidth = button.width;
+        float currentButtonHeight = button.height;
+        float currentButtonDepth = BUTTON_DEPTH;
+
+        // Apply hover effect
+        if (button == hoveredButton && pressedButton == null) {
+            float hoverScale = 1.05f; // Slightly larger on hover
+            currentButtonWidth = button.width * hoverScale;
+            currentButtonHeight = button.height * hoverScale;
+            currentButtonX = button.x + (button.width - currentButtonWidth) / 2;
+            currentButtonY = button.y + (button.height - currentButtonHeight) / 2;
+        }
+
+        // Apply press animation if this button is currently pressed
+        if (button == pressedButton) {
+            float scale = 1.0f - (0.1f * (pressTimer / PRESS_ANIMATION_DURATION)); // Scale down by up to 10% (more noticeable)
+            currentButtonWidth = button.width * scale;
+            currentButtonHeight = button.height * scale;
+            currentButtonX = button.x + (button.width - currentButtonWidth) / 2;
+            currentButtonY = button.y + (button.height - currentButtonHeight) / 2;
+            currentButtonDepth = BUTTON_DEPTH * (1.0f - (0.9f * (pressTimer / PRESS_ANIMATION_DURATION))); // Scale depth to 10% (very significant)
+            currentButtonY -= (BUTTON_DEPTH - currentButtonDepth); // Shift down to simulate pressing
+        }
+
+        // Draw the bottom/back face (darkest)
+        shapeRenderer.setColor(0.05f, 0.1f, 0.15f, 1.0f); // Very dark color
+        shapeRenderer.rect(currentButtonX + currentButtonDepth, currentButtonY - currentButtonDepth, currentButtonWidth, currentButtonHeight);
+
+        // Draw the right side face
+        shapeRenderer.setColor(0.15f, 0.25f, 0.35f, 1.0f); // Darker side color
+        shapeRenderer.rect(currentButtonX + currentButtonWidth, currentButtonY - currentButtonDepth, currentButtonDepth, currentButtonHeight + currentButtonDepth);
+
+        // Draw the bottom side face
+        shapeRenderer.setColor(0.2f, 0.3f, 0.4f, 1.0f); // Slightly lighter for bottom side
+        shapeRenderer.rect(currentButtonX, currentButtonY - currentButtonDepth, currentButtonWidth + currentButtonDepth, currentButtonDepth);
+
+        // Draw the top face (main button color)
+        float topFaceColorFactor = 1.0f;
+        if (button == hoveredButton && pressedButton == null) {
+            topFaceColorFactor = 1.3f; // Brighter on hover
+        }
+        shapeRenderer.setColor(0.3f * topFaceColorFactor, 0.4f * topFaceColorFactor, 0.5f * topFaceColorFactor, 1.0f);
+        shapeRenderer.rect(currentButtonX, currentButtonY, currentButtonWidth, currentButtonHeight);
+    }
+
+    // New: Draws text for a 3D button with hover/press animation
+    private void drawMainUIButtonText(Rectangle button, String text) {
+        float currentButtonX = button.x;
+        float currentButtonY = button.y;
+        float currentButtonWidth = button.width;
+        float currentButtonHeight = button.height;
+        float currentButtonDepth = BUTTON_DEPTH; // Consistent for text alignment
+
+        // Apply hover effect
+        if (button == hoveredButton && pressedButton == null) {
+            float hoverScale = 1.05f;
+            currentButtonWidth = button.width * hoverScale;
+            currentButtonHeight = button.height * hoverScale;
+            currentButtonX = button.x + (button.width - currentButtonWidth) / 2;
+            currentButtonY = button.y + (button.height - currentButtonHeight) / 2;
+        }
+
+        // Apply press animation
+        if (button == pressedButton) {
+            float scale = 1.0f - (0.1f * (pressTimer / PRESS_ANIMATION_DURATION));
+            currentButtonWidth = button.width * scale;
+            currentButtonHeight = button.height * scale;
+            currentButtonX = button.x + (button.width - currentButtonWidth) / 2;
+            currentButtonY = button.y + (button.height - currentButtonHeight) / 2;
+            currentButtonDepth = BUTTON_DEPTH * (1.0f - (0.9f * (pressTimer / PRESS_ANIMATION_DURATION)));
+            currentButtonY -= (BUTTON_DEPTH - currentButtonDepth); // Shift down
+        }
+
+        // Draw text (centered)
+        game.font.setColor(1, 1, 1, 1f); // Reset color for text
+        com.badlogic.gdx.graphics.g2d.GlyphLayout textLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, text);
+        game.font.draw(game.batch, text,
+            currentButtonX + currentButtonWidth / 2 - textLayout.width / 2,
+            currentButtonY + currentButtonHeight / 2 + textLayout.height / 2);
+    }
+    
     private void drawColoredText(Rectangle bounds, String text, Color color) {
         game.font.setColor(color);
         com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, text);
@@ -426,29 +565,51 @@ public class GameScreen implements Screen {
             
             // Check button clicks
             if (backButton.contains(touchX, touchY)) {
-                // Go back to image selection
-                game.setScreen(new ImageSelectionScreen(game, gameMode));
+                pressedButton = backButton; // Set pressed button for animation
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        game.setScreen(new ImageSelectionScreen(game, gameMode));
+                    }
+                });
                 return;
             }
             
             if (resetButton.contains(touchX, touchY)) {
-                // Reset the puzzle
-                puzzleBoard.reset();
-                showWinMessage = false;
-                winMessageTimer = 0f;
-                updateTileRenderPositions();
+                pressedButton = resetButton; // Set pressed button for animation
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        puzzleBoard.reset();
+                        showWinMessage = false;
+                        winMessageTimer = 0f;
+                        updateTileRenderPositions();
+                    }
+                });
                 return;
             }
 
             // New: Handle Help button click
             if (helpButton.contains(touchX, touchY)) {
-                showingFullImage = true;
+                pressedButton = helpButton; // Set pressed button for animation
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        showingFullImage = true;
+                    }
+                });
                 return;
             }
 
             // New: Handle Instructions button click
             if (instructionsButton.contains(touchX, touchY)) {
-                showingInstructions = true;
+                pressedButton = instructionsButton; // Set pressed button for animation
+                Gdx.app.postRunnable(new Runnable() {
+                    @Override
+                    public void run() {
+                        showingInstructions = true;
+                    }
+                });
                 return;
             }
             
@@ -588,6 +749,12 @@ public class GameScreen implements Screen {
         if (rotationIconTexture != null) {
             rotationIconTexture.dispose();
         }
+        if (solidBackgroundTexture != null) {
+            solidBackgroundTexture.dispose();
+        }
+        if (shapeRenderer != null) {
+            shapeRenderer.dispose();
+        }
     }
 
     // New: Draws the full puzzle image as an overlay
@@ -602,18 +769,14 @@ public class GameScreen implements Screen {
 
     // New: Draws game instructions as an overlay
     private void drawInstructionsOverlay() {
-        // Draw a solid background behind instructions
-        game.batch.setColor(0f, 0f, 0f, 1.0f); // Solid black background
-        // Create a 1x1 white texture for drawing colored rectangles
-        com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
-        pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
-        pixmap.fill();
-        com.badlogic.gdx.graphics.Texture backgroundTexture = new com.badlogic.gdx.graphics.Texture(pixmap);
-        pixmap.dispose();
+        // Draw a solid background behind instructions using ShapeRenderer
+        shapeRenderer.setProjectionMatrix(game.camera.combined); // Ensure correct projection
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0f, 0f, 0f, 0.8f); // Semi-transparent black background
+        shapeRenderer.rect(0, 0, TileShiftGame.VIRTUAL_WIDTH, TileShiftGame.VIRTUAL_HEIGHT);
+        shapeRenderer.end();
 
-        game.batch.draw(backgroundTexture, 0, 0, TileShiftGame.VIRTUAL_WIDTH, TileShiftGame.VIRTUAL_HEIGHT);
-        game.batch.setColor(1, 1, 1, 1f); // Reset color for drawing text
-        backgroundTexture.dispose(); // Dispose after drawing
+        game.batch.begin(); // Start SpriteBatch for text and brand logo
 
         // Draw the brand logo above the instructions text
         if (brandLogo != null) {
