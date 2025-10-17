@@ -87,8 +87,8 @@ public class ImageSelectionScreen implements Screen {
     private void setupButtons() {
         imageButtons = new Array<>();
         
-        // Back button (positioned higher)
-        backButton = new Rectangle(PADDING, TileShiftGame.VIRTUAL_HEIGHT - BUTTON_TOP_MARGIN - 50, 120, 50); // Adjusted Y to be higher
+        // Back button (positioned higher and aligned with GameScreen back button)
+        backButton = new Rectangle(50f, TileShiftGame.VIRTUAL_HEIGHT - BUTTON_TOP_MARGIN - 50, 120f, 50f); // Adjusted X to 50f, width to 120f, height to 50f
         
         float startX = 50f;
         float startY = TileShiftGame.VIRTUAL_HEIGHT - 150 - THUMBNAIL_SIZE; // Adjusted to be lower and clear of titles/back button
@@ -158,10 +158,10 @@ public class ImageSelectionScreen implements Screen {
         // Draw title with game mode (positioned higher)
         String modeText = gameMode == GameMode.CLASSIC ? "Classic Mode" :
                          gameMode == GameMode.ROTATE ? "Rotate Mode" : "Shift Mode";
-        game.font.draw(game.batch, "Tile Shifter Puzzle - " + modeText, 50, TileShiftGame.VIRTUAL_HEIGHT - 30); // Adjusted Y
+        game.font.draw(game.batch, "Tile Shifter Puzzle - " + modeText, 190, TileShiftGame.VIRTUAL_HEIGHT - 30); // Adjusted X to avoid back button
         
         // Draw subtitle (positioned higher, below title)
-        game.font.draw(game.batch, "Select an image to start:", 50, TileShiftGame.VIRTUAL_HEIGHT - 80); // Adjusted Y
+        game.font.draw(game.batch, "Select an image to start:", 190, TileShiftGame.VIRTUAL_HEIGHT - 80); // Adjusted X to avoid back button
         
         // Draw thumbnails
         for (int i = 0; i < thumbnails.size; i++) {

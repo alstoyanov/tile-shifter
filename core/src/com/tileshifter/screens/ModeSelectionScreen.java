@@ -238,8 +238,8 @@ public class ModeSelectionScreen implements Screen {
         
         // Draw button description (centered, smaller font effect by reducing opacity and size)
         game.font.setColor(0.8f, 0.8f, 0.8f, 1f); // Slightly lighter grey for description
+        game.font.getData().setScale(0.7f); // Smaller scale for description BEFORE creating GlyphLayout
         com.badlogic.gdx.graphics.g2d.GlyphLayout descLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, description);
-        game.font.getData().setScale(0.7f); // Smaller scale for description
         game.font.draw(game.batch, description, 
             currentButtonX + currentButtonWidth / 2 - descLayout.width / 2,
             currentButtonY + currentButtonHeight / 2 - descLayout.height / 2 - 10); // Adjust Y for spacing with title
