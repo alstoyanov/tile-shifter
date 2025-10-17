@@ -41,6 +41,9 @@ public class TileShiftGame extends Game {
         parameter.shadowOffsetY = 1;
         parameter.borderColor = com.badlogic.gdx.graphics.Color.DARK_GRAY;
         parameter.borderWidth = 1;
+        parameter.genMipMaps = true; // Enable mipmaps for smoother scaling
+        parameter.minFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear; // Use linear filtering
+        parameter.magFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear; // Use linear filtering
         font = generator.generateFont(parameter); // Generates a clean BitmapFont
         generator.dispose(); // Dispose the generator to avoid memory leaks
         

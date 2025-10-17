@@ -19,6 +19,7 @@ public class MenuScreen implements Screen {
     private Array<String> imageFiles;
     private Array<Texture> thumbnails;
     private Array<Rectangle> imageButtons;
+    // private Texture brandLogo; // Removed: No longer displayed on MenuScreen
     
     private static final float THUMBNAIL_SIZE = 120f;
     private static final float PADDING = 20f;
@@ -37,8 +38,9 @@ public class MenuScreen implements Screen {
         FileHandle imagesDir = Gdx.files.internal("images");
         if (imagesDir.exists()) {
             for (FileHandle file : imagesDir.list()) {
-                if (file.extension().equalsIgnoreCase("jpg") || 
-                    file.extension().equalsIgnoreCase("jpeg")) {
+                if ((file.extension().equalsIgnoreCase("jpg") || 
+                     file.extension().equalsIgnoreCase("jpeg")) && 
+                    !file.name().equalsIgnoreCase("Mytholore.jpg")) { // Exclude Mytholore.jpg
                     imageFiles.add(file.name());
                 }
             }
@@ -84,6 +86,7 @@ public class MenuScreen implements Screen {
     @Override
     public void show() {
         // Called when this screen becomes the current screen
+        // brandLogo = new Texture(Gdx.files.internal("images/Mytholore.jpg")); // Removed: No longer loaded here
     }
     
     @Override
@@ -94,6 +97,14 @@ public class MenuScreen implements Screen {
         
         game.batch.begin();
         
+        // Draw brand logo at a prominent position (removed)
+        // if (brandLogo != null) {
+        //     game.batch.draw(brandLogo, 
+        //                     TileShiftGame.VIRTUAL_WIDTH - brandLogo.getWidth() - 20, 
+        //                     TileShiftGame.VIRTUAL_HEIGHT - brandLogo.getHeight() - 20,
+        //                     brandLogo.getWidth() / 2, brandLogo.getHeight() / 2); // Scale down
+        // }
+
         // Draw title
         game.font.draw(game.batch, "Tile Shifter Puzzle", 50, TileShiftGame.VIRTUAL_HEIGHT - 50);
         game.font.draw(game.batch, "Select an image to start:", 50, TileShiftGame.VIRTUAL_HEIGHT - 80);
@@ -178,5 +189,8 @@ public class MenuScreen implements Screen {
         for (Texture thumbnail : thumbnails) {
             thumbnail.dispose();
         }
+        // if (brandLogo != null) { // Removed: No longer disposed here
+        //     brandLogo.dispose();
+        // }
     }
 }

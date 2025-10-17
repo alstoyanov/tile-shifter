@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.tileshifter.PuzzleBoard;
 import com.tileshifter.Tile;
 import com.tileshifter.TileShiftGame;
@@ -20,6 +22,7 @@ public class GameScreen implements Screen {
     private PuzzleBoard puzzleBoard;
     private Texture puzzleTexture;
     private String imageName;
+    private Texture brandLogo; // New: To display Mytholore.jpg on instructions screen
     
     // UI elements
     private Rectangle backButton;
@@ -47,6 +50,9 @@ public class GameScreen implements Screen {
         
         // Load the puzzle image
         puzzleTexture = new Texture(Gdx.files.internal("images/" + imageName));
+
+        // Load the brand logo for the instructions screen
+        brandLogo = new Texture(Gdx.files.internal("images/Mytholore.jpg"));
         
         // Initialize puzzle board
         puzzleBoard = new PuzzleBoard();
@@ -316,6 +322,9 @@ public class GameScreen implements Screen {
         if (puzzleTexture != null) {
             puzzleTexture.dispose();
         }
+        if (brandLogo != null) {
+            brandLogo.dispose();
+        }
     }
 
     // New: Draws the full puzzle image as an overlay
@@ -343,6 +352,15 @@ public class GameScreen implements Screen {
         game.batch.setColor(1, 1, 1, 1f); // Reset color for drawing text
         backgroundTexture.dispose(); // Dispose after drawing
 
+        // Draw the brand logo above the instructions text
+        if (brandLogo != null) {
+            float logoWidth = brandLogo.getWidth() / 1.5f; // Scale down for instructions screen
+            float logoHeight = brandLogo.getHeight() / 1.5f;
+            float logoX = TileShiftGame.VIRTUAL_WIDTH / 2 - logoWidth / 2;
+            float logoY = TileShiftGame.VIRTUAL_HEIGHT - logoHeight - 20; // Adjusted logo position higher
+            game.batch.draw(brandLogo, logoX, logoY, logoWidth, logoHeight);
+        }
+
         String instructionsText = "HOW TO PLAY:\n\n" +
                                   "1. Click a tile adjacent to the empty space to move it.\n" +
                                   "2. Arrange all tiles to complete the image.\n" +
@@ -352,9 +370,10 @@ public class GameScreen implements Screen {
         // Calculate text position to center it
         com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, instructionsText);
         float textX = TileShiftGame.VIRTUAL_WIDTH / 2 - layout.width / 2;
-        float textY = TileShiftGame.VIRTUAL_HEIGHT / 2 + layout.height / 2;
+        float textY = TileShiftGame.VIRTUAL_HEIGHT - 200 - layout.height / 2; // Adjusted text position lower
 
         game.font.draw(game.batch, instructionsText, textX, textY);
         game.font.draw(game.batch, "\n\nTap anywhere to close", textX, textY - layout.height - 30);
     }
+    
 }
