@@ -1,0 +1,56 @@
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Gradle
+.gradle/
+build/
+.project
+.classpath
+.settings/
+bin/
+out/
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.lock
+
+# OS-specific
+.DS_Store
+thumbs.db
+
+# LibGDX specific
+# Android
+android/build/
+android/src/
+android/libs/
+
+# HTML
+html/build/
+html/war/
+
+# iOS
+ios/build/
+
+# Desktop
+desktop/build/
+
+# Gradle Wrapper files
+gradle/wrapper/gradle-wrapper.jar
+
+# Local configuration files
+local.properties
+
+# Generated scripts
+*.bat
+*.sh
+
+# Assets, if they are large or constantly changing (adjust as needed)
+# assets/
