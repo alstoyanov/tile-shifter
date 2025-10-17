@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.graphics.Color;
 import com.tileshifter.PuzzleBoard;
 import com.tileshifter.Tile;
 import com.tileshifter.TileShiftGame;
@@ -22,6 +24,8 @@ public class GameScreen implements Screen {
     // UI elements
     private Rectangle backButton;
     private Rectangle resetButton;
+    private Rectangle helpButton; // New: Button to show full image
+    private Rectangle instructionsButton; // New: Button to show instructions
     private Rectangle winMessageArea;
     
     // Board rendering properties
@@ -32,6 +36,10 @@ public class GameScreen implements Screen {
     // Win state
     private boolean showWinMessage = false;
     private float winMessageTimer = 0f;
+
+    // New: State for showing full image or instructions
+    private boolean showingFullImage = false;
+    private boolean showingInstructions = false;
     
     public GameScreen(TileShiftGame game, String imageName) {
         this.game = game;
@@ -50,31 +58,37 @@ public class GameScreen implements Screen {
     
     private void setupUI() {
         // Back button (top-left)
-        backButton = new Rectangle(20, TileShiftGame.SCREEN_HEIGHT - 60, 100, 40);
+        backButton = new Rectangle(20, TileShiftGame.VIRTUAL_HEIGHT - 60, 100, 40);
         
         // Reset button (top-right)
-        resetButton = new Rectangle(TileShiftGame.SCREEN_WIDTH - 120, TileShiftGame.SCREEN_HEIGHT - 60, 100, 40);
+        resetButton = new Rectangle(TileShiftGame.VIRTUAL_WIDTH - 120, TileShiftGame.VIRTUAL_HEIGHT - 60, 100, 40);
+
+        // Help button (show full image) - next to reset
+        helpButton = new Rectangle(TileShiftGame.VIRTUAL_WIDTH - 240, TileShiftGame.VIRTUAL_HEIGHT - 60, 100, 40);
+
+        // Instructions button - next to help
+        instructionsButton = new Rectangle(TileShiftGame.VIRTUAL_WIDTH - 360, TileShiftGame.VIRTUAL_HEIGHT - 60, 100, 40);
         
         // Win message area (center)
         winMessageArea = new Rectangle(
-            TileShiftGame.SCREEN_WIDTH / 2 - 150, 
-            TileShiftGame.SCREEN_HEIGHT / 2 - 50, 
+            TileShiftGame.VIRTUAL_WIDTH / 2 - 150, 
+            TileShiftGame.VIRTUAL_HEIGHT / 2 - 50, 
             300, 100
         );
     }
     
     private void calculateBoardLayout() {
         // Calculate board size to fit in screen with padding
-        float availableWidth = TileShiftGame.SCREEN_WIDTH - 2 * BOARD_PADDING;
-        float availableHeight = TileShiftGame.SCREEN_HEIGHT - 2 * BOARD_PADDING - 80; // Extra space for UI
+        float availableWidth = TileShiftGame.VIRTUAL_WIDTH - 2 * BOARD_PADDING;
+        float availableHeight = TileShiftGame.VIRTUAL_HEIGHT - 2 * BOARD_PADDING - 80; // Extra space for UI
         
         float maxBoardSize = Math.min(availableWidth, availableHeight);
         tileSize = maxBoardSize / PuzzleBoard.BOARD_SIZE;
         
         // Center the board
         float boardSize = tileSize * PuzzleBoard.BOARD_SIZE;
-        boardStartX = (TileShiftGame.SCREEN_WIDTH - boardSize) / 2;
-        boardStartY = (TileShiftGame.SCREEN_HEIGHT - boardSize) / 2 - 20; // Slightly lower for UI
+        boardStartX = (TileShiftGame.VIRTUAL_WIDTH - boardSize) / 2;
+        boardStartY = (TileShiftGame.VIRTUAL_HEIGHT - boardSize) / 2 - 20; // Slightly lower for UI
         
         // Set initial render positions for all tiles
         updateTileRenderPositions();
@@ -122,6 +136,8 @@ public class GameScreen implements Screen {
         // Draw UI buttons
         drawButton(backButton, "Back");
         drawButton(resetButton, "Reset");
+        drawButton(helpButton, "Help"); // Draw Help button
+        drawButton(instructionsButton, "Inst."); // Draw Instructions button
         
         // Draw puzzle board
         drawPuzzleBoard();
@@ -132,18 +148,29 @@ public class GameScreen implements Screen {
         }
         
         // Draw game info and instructions
-        game.font.draw(game.batch, "Image: " + imageName, 20, 50);
-        game.font.draw(game.batch, "Click tiles adjacent to empty space to move them", 20, 30);
-        
+        // game.font.draw(game.batch, "Image: " + imageName, 20, 50); // Removed filename display
+        // game.font.draw(game.batch, "Click tiles adjacent to empty space to move them", 20, 30);
+        // Removed static instructions at the bottom
         // Show move count or other game stats
         if (!showWinMessage) {
-            game.font.draw(game.batch, "Arrange tiles to complete the image", 20, 10);
+            // game.font.draw(game.batch, "Arrange tiles to complete the image", 20, 10); // Removed final instruction line
+        }
+
+        // New: Draw full image or instructions overlay
+        if (showingFullImage) {
+            drawFullImageOverlay();
+        } else if (showingInstructions) {
+            drawInstructionsOverlay();
         }
         
         game.batch.end();
         
-        // Handle input
-        handleInput();
+        // Handle input (only if no overlay is active)
+        if (!showingFullImage && !showingInstructions) {
+            handleInput();
+        } else {
+            handleOverlayInput(); // New input handler for overlays
+        }
     }
     
     private void drawButton(Rectangle button, String text) {
@@ -195,8 +222,12 @@ public class GameScreen implements Screen {
     
     private void handleInput() {
         if (Gdx.input.justTouched()) {
-            float touchX = Gdx.input.getX();
-            float touchY = TileShiftGame.SCREEN_HEIGHT - Gdx.input.getY(); // Flip Y coordinate
+            // Unproject touch coordinates to world coordinates
+            Vector3 touchPoint = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            game.viewport.unproject(touchPoint);
+
+            float touchX = touchPoint.x;
+            float touchY = touchPoint.y;
             
             // Check button clicks
             if (backButton.contains(touchX, touchY)) {
@@ -213,11 +244,31 @@ public class GameScreen implements Screen {
                 updateTileRenderPositions();
                 return;
             }
+
+            // New: Handle Help button click
+            if (helpButton.contains(touchX, touchY)) {
+                showingFullImage = true;
+                return;
+            }
+
+            // New: Handle Instructions button click
+            if (instructionsButton.contains(touchX, touchY)) {
+                showingInstructions = true;
+                return;
+            }
             
             // Check tile clicks (only if not animating)
             if (!puzzleBoard.isAnimating()) {
                 handleTileClick(touchX, touchY);
             }
+        }
+    }
+
+    // New: Handles input when an overlay (full image or instructions) is active
+    private void handleOverlayInput() {
+        if (Gdx.input.justTouched()) {
+            showingFullImage = false; // Dismiss full image on any touch
+            showingInstructions = false; // Dismiss instructions on any touch
         }
     }
     
@@ -265,5 +316,45 @@ public class GameScreen implements Screen {
         if (puzzleTexture != null) {
             puzzleTexture.dispose();
         }
+    }
+
+    // New: Draws the full puzzle image as an overlay
+    private void drawFullImageOverlay() {
+        game.batch.setColor(1, 1, 1, 0.8f); // Slightly transparent overlay
+        game.batch.draw(puzzleTexture, 
+            TileShiftGame.VIRTUAL_WIDTH / 2 - puzzleTexture.getWidth() / 2, 
+            TileShiftGame.VIRTUAL_HEIGHT / 2 - puzzleTexture.getHeight() / 2,
+            puzzleTexture.getWidth(), puzzleTexture.getHeight());
+        game.batch.setColor(1, 1, 1, 1f); // Reset color
+    }
+
+    // New: Draws game instructions as an overlay
+    private void drawInstructionsOverlay() {
+        // Draw a solid background behind instructions
+        game.batch.setColor(0f, 0f, 0f, 1.0f); // Solid black background
+        // Create a 1x1 white texture for drawing colored rectangles
+        com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+        pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
+        pixmap.fill();
+        com.badlogic.gdx.graphics.Texture backgroundTexture = new com.badlogic.gdx.graphics.Texture(pixmap);
+        pixmap.dispose();
+
+        game.batch.draw(backgroundTexture, 0, 0, TileShiftGame.VIRTUAL_WIDTH, TileShiftGame.VIRTUAL_HEIGHT);
+        game.batch.setColor(1, 1, 1, 1f); // Reset color for drawing text
+        backgroundTexture.dispose(); // Dispose after drawing
+
+        String instructionsText = "HOW TO PLAY:\n\n" +
+                                  "1. Click a tile adjacent to the empty space to move it.\n" +
+                                  "2. Arrange all tiles to complete the image.\n" +
+                                  "3. Use \"Reset\" to shuffle for a new game.\n" +
+                                  "4. Use \"Back\" to return to image selection.";
+        
+        // Calculate text position to center it
+        com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, instructionsText);
+        float textX = TileShiftGame.VIRTUAL_WIDTH / 2 - layout.width / 2;
+        float textY = TileShiftGame.VIRTUAL_HEIGHT / 2 + layout.height / 2;
+
+        game.font.draw(game.batch, instructionsText, textX, textY);
+        game.font.draw(game.batch, "\n\nTap anywhere to close", textX, textY - layout.height - 30);
     }
 }

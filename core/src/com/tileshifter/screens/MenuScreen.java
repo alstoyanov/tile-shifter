@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.tileshifter.TileShiftGame;
 
@@ -61,11 +62,11 @@ public class MenuScreen implements Screen {
         imageButtons = new Array<>();
         
         float startX = 50f;
-        float startY = TileShiftGame.SCREEN_HEIGHT - 200f; // Move images down to avoid text overlap
+        float startY = TileShiftGame.VIRTUAL_HEIGHT - 300f; // Adjusted further down to ensure no overlap
         float currentX = startX;
         float currentY = startY;
         
-        int imagesPerRow = (int) ((TileShiftGame.SCREEN_WIDTH - 100f) / (THUMBNAIL_SIZE + PADDING));
+        int imagesPerRow = (int) ((TileShiftGame.VIRTUAL_WIDTH - 100f) / (THUMBNAIL_SIZE + PADDING));
         
         for (int i = 0; i < imageFiles.size; i++) {
             Rectangle button = new Rectangle(currentX, currentY, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
@@ -94,8 +95,8 @@ public class MenuScreen implements Screen {
         game.batch.begin();
         
         // Draw title
-        game.font.draw(game.batch, "Tile Shifter Puzzle", 50, TileShiftGame.SCREEN_HEIGHT - 50);
-        game.font.draw(game.batch, "Select an image to start:", 50, TileShiftGame.SCREEN_HEIGHT - 80);
+        game.font.draw(game.batch, "Tile Shifter Puzzle", 50, TileShiftGame.VIRTUAL_HEIGHT - 50);
+        game.font.draw(game.batch, "Select an image to start:", 50, TileShiftGame.VIRTUAL_HEIGHT - 80);
         
         // Draw thumbnails
         for (int i = 0; i < thumbnails.size; i++) {
@@ -120,8 +121,8 @@ public class MenuScreen implements Screen {
             
             game.batch.draw(thumbnail, drawX, drawY, drawWidth, drawHeight);
             
-            // Draw filename below thumbnail
-            game.font.draw(game.batch, imageFiles.get(i), button.x, button.y - 10);
+            // Draw filename below thumbnail (removed)
+            // game.font.draw(game.batch, imageFiles.get(i), button.x, button.y - 10);
         }
         
         game.batch.end();
@@ -132,8 +133,12 @@ public class MenuScreen implements Screen {
     
     private void handleInput() {
         if (Gdx.input.justTouched()) {
-            float touchX = Gdx.input.getX();
-            float touchY = TileShiftGame.SCREEN_HEIGHT - Gdx.input.getY(); // Flip Y coordinate
+            // Unproject touch coordinates to world coordinates
+            Vector3 touchPoint = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            game.viewport.unproject(touchPoint);
+
+            float touchX = touchPoint.x;
+            float touchY = touchPoint.y;
             
             for (int i = 0; i < imageButtons.size; i++) {
                 Rectangle button = imageButtons.get(i);
@@ -149,7 +154,7 @@ public class MenuScreen implements Screen {
     
     @Override
     public void resize(int width, int height) {
-        // Handle screen resize if needed
+        // Handled by TileShiftGame's resize method
     }
     
     @Override
