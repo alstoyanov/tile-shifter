@@ -10,7 +10,10 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
+import com.tileshifter.GameMode;
 import com.tileshifter.PuzzleBoard;
+import com.tileshifter.RotatePuzzleBoard;
+import com.tileshifter.ShiftPuzzleBoard;
 import com.tileshifter.Tile;
 import com.tileshifter.TileShiftGame;
 
@@ -19,6 +22,7 @@ import com.tileshifter.TileShiftGame;
  */
 public class GameScreen implements Screen {
     private TileShiftGame game;
+    private GameMode gameMode;
     private PuzzleBoard puzzleBoard;
     private Texture puzzleTexture;
     private String imageName;
@@ -30,6 +34,17 @@ public class GameScreen implements Screen {
     private Rectangle helpButton; // New: Button to show full image
     private Rectangle instructionsButton; // New: Button to show instructions
     private Rectangle winMessageArea;
+    
+    // Shift mode UI elements (arrow buttons for columns/rows)
+    private Rectangle[] columnUpButtons;
+    private Rectangle[] columnDownButtons;
+    private Rectangle[] rowLeftButtons;
+    private Rectangle[] rowRightButtons;
+
+    // Rotate mode UI elements (circular buttons for 2x2 sub-board rotations)
+    private Rectangle[] rotateButtons; // 5 buttons for the 5 sub-boards
+    private Texture circleButtonTexture; // Texture for circular buttons
+    private Texture rotationIconTexture; // New: Texture for rotation icon
     
     // Board rendering properties
     private float boardStartX, boardStartY;
@@ -44,9 +59,10 @@ public class GameScreen implements Screen {
     private boolean showingFullImage = false;
     private boolean showingInstructions = false;
     
-    public GameScreen(TileShiftGame game, String imageName) {
+    public GameScreen(TileShiftGame game, String imageName, GameMode gameMode) {
         this.game = game;
         this.imageName = imageName;
+        this.gameMode = gameMode;
         
         // Load the puzzle image
         puzzleTexture = new Texture(Gdx.files.internal("images/" + imageName));
@@ -54,9 +70,37 @@ public class GameScreen implements Screen {
         // Load the brand logo for the instructions screen
         brandLogo = new Texture(Gdx.files.internal("images/Mytholore.jpg"));
         
-        // Initialize puzzle board
-        puzzleBoard = new PuzzleBoard();
+        // Initialize puzzle board based on game mode
+        switch (gameMode) {
+            case ROTATE:
+                puzzleBoard = new RotatePuzzleBoard();
+                break;
+            case SHIFT:
+                puzzleBoard = new ShiftPuzzleBoard();
+                break;
+            case CLASSIC:
+            default:
+                puzzleBoard = new PuzzleBoard();
+                break;
+        }
         puzzleBoard.initializeBoard(puzzleTexture);
+        
+        // Create circular button texture for Rotate mode
+        com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(64, 64, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.7f, 0.7f, 0.7f, 0.9f); // Brighter, more opaque grey
+        pixmap.fillCircle(32, 32, 30);
+        circleButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+
+        // Create rotation icon texture
+        com.badlogic.gdx.graphics.Pixmap iconPixmap = new com.badlogic.gdx.graphics.Pixmap(32, 32, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+        iconPixmap.setColor(Color.YELLOW); // Bright yellow for visibility
+        // Draw a simple clockwise arrow
+        iconPixmap.fillTriangle(16, 2, 22, 10, 10, 10); // Arrowhead
+        iconPixmap.fillRectangle(14, 10, 4, 10); // Arrow shaft
+        iconPixmap.fillCircle(16, 24, 6); // Base of arrow
+        rotationIconTexture = new Texture(iconPixmap);
+        iconPixmap.dispose();
         
         setupUI();
         calculateBoardLayout();
@@ -81,12 +125,28 @@ public class GameScreen implements Screen {
             TileShiftGame.VIRTUAL_HEIGHT / 2 - 50, 
             300, 100
         );
+        
+        // Initialize shift mode buttons (will be positioned in calculateBoardLayout)
+        if (gameMode == GameMode.SHIFT) {
+            columnUpButtons = new Rectangle[PuzzleBoard.BOARD_SIZE];
+            columnDownButtons = new Rectangle[PuzzleBoard.BOARD_SIZE];
+            rowLeftButtons = new Rectangle[PuzzleBoard.BOARD_SIZE];
+            rowRightButtons = new Rectangle[PuzzleBoard.BOARD_SIZE];
+        } else if (gameMode == GameMode.ROTATE) {
+            rotateButtons = new Rectangle[5]; // 5 sub-boards
+        }
     }
     
     private void calculateBoardLayout() {
         // Calculate board size to fit in screen with padding
         float availableWidth = TileShiftGame.VIRTUAL_WIDTH - 2 * BOARD_PADDING;
         float availableHeight = TileShiftGame.VIRTUAL_HEIGHT - 2 * BOARD_PADDING - 80; // Extra space for UI
+        
+        // Reserve extra space for shift mode buttons
+        if (gameMode == GameMode.SHIFT) {
+            availableWidth -= 80; // Space for left/right buttons
+            availableHeight -= 80; // Space for up/down buttons
+        }
         
         float maxBoardSize = Math.min(availableWidth, availableHeight);
         tileSize = maxBoardSize / PuzzleBoard.BOARD_SIZE;
@@ -95,6 +155,80 @@ public class GameScreen implements Screen {
         float boardSize = tileSize * PuzzleBoard.BOARD_SIZE;
         boardStartX = (TileShiftGame.VIRTUAL_WIDTH - boardSize) / 2;
         boardStartY = (TileShiftGame.VIRTUAL_HEIGHT - boardSize) / 2 - 20; // Slightly lower for UI
+        
+        // Position shift mode arrow buttons
+        if (gameMode == GameMode.SHIFT) {
+            float buttonSize = 30f;
+            
+            // Column up/down buttons
+            for (int col = 0; col < PuzzleBoard.BOARD_SIZE; col++) {
+                float centerX = boardStartX + col * tileSize + tileSize / 2 - buttonSize / 2;
+                
+                columnUpButtons[col] = new Rectangle(
+                    centerX,
+                    boardStartY + boardSize + 10,
+                    buttonSize,
+                    buttonSize
+                );
+                
+                columnDownButtons[col] = new Rectangle(
+                    centerX,
+                    boardStartY - buttonSize - 10,
+                    buttonSize,
+                    buttonSize
+                );
+            }
+            
+            // Row left/right buttons
+            for (int row = 0; row < PuzzleBoard.BOARD_SIZE; row++) {
+                float centerY = boardStartY + row * tileSize + tileSize / 2 - buttonSize / 2;
+                
+                rowLeftButtons[row] = new Rectangle(
+                    boardStartX - buttonSize - 10,
+                    centerY,
+                    buttonSize,
+                    buttonSize
+                );
+                
+                rowRightButtons[row] = new Rectangle(
+                    boardStartX + boardSize + 10,
+                    centerY,
+                    buttonSize,
+                    buttonSize
+                );
+            }
+        } else if (gameMode == GameMode.ROTATE) {
+            // Define the 5 sub-board starting grid positions (MUST MATCH RotatePuzzleBoard.SUBBOARD_POSITIONS order)
+            int[][] subBoardGridPositions = {
+                {0, 0}, // Index 0: Top-left
+                {0, 2}, // Index 1: Bottom-left
+                {2, 0}, // Index 2: Top-right
+                {2, 2}, // Index 3: Bottom-right
+                {1, 1}  // Index 4: Center
+            };
+            
+            float buttonSize = 30f; // Made smaller for better visibility
+            
+            for (int i = 0; i < subBoardGridPositions.length; i++) {
+                int gridX = subBoardGridPositions[i][0];
+                int gridY = subBoardGridPositions[i][1];
+
+                // Calculate center of the 2x2 sub-board
+                float subBoardCenterX = boardStartX + gridX * tileSize + tileSize;
+                float subBoardCenterY = boardStartY + gridY * tileSize + tileSize;
+
+                // Position button centered within the sub-board's 2x2 area
+                float buttonX = subBoardCenterX - buttonSize / 2;
+                float buttonY = subBoardCenterY - buttonSize / 2;
+                
+                rotateButtons[i] = new Rectangle(
+                    buttonX,
+                    buttonY,
+                    buttonSize,
+                    buttonSize
+                );
+            }
+        }
         
         // Set initial render positions for all tiles
         updateTileRenderPositions();
@@ -145,8 +279,24 @@ public class GameScreen implements Screen {
         drawButton(helpButton, "Help"); // Draw Help button
         drawButton(instructionsButton, "Inst."); // Draw Instructions button
         
-        // Draw puzzle board
+        // Draw shift mode arrow buttons
+        if (gameMode == GameMode.SHIFT) {
+            drawShiftButtons();
+        }
+        
+        // Draw puzzle board first
         drawPuzzleBoard();
+
+        // Then draw rotate mode buttons on top
+        if (gameMode == GameMode.ROTATE) {
+            game.batch.setColor(Color.WHITE); // Ensure full color and opacity
+            drawRotateButtons();
+        }
+        
+        // Removed: Old rotate mode indicators
+        // if (gameMode == GameMode.ROTATE) {
+        //     drawRotateIndicators();
+        // }
         
         // Draw win message if needed
         if (showWinMessage) {
@@ -187,6 +337,15 @@ public class GameScreen implements Screen {
         
         game.font.draw(game.batch, text, textX, textY);
     }
+
+    private void drawColoredText(Rectangle bounds, String text, Color color) {
+        game.font.setColor(color);
+        com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, text);
+        float textX = bounds.x + bounds.width / 2 - layout.width / 2;
+        float textY = bounds.y + bounds.height / 2 + layout.height / 2;
+        game.font.draw(game.batch, text, textX, textY);
+        game.font.setColor(Color.WHITE); // Reset to default color
+    }
     
     private void drawPuzzleBoard() {
         // Draw all tiles without unnecessary borders
@@ -226,6 +385,36 @@ public class GameScreen implements Screen {
         }
     }
     
+    private void drawShiftButtons() {
+        // Draw column up/down buttons
+        for (int col = 0; col < PuzzleBoard.BOARD_SIZE; col++) {
+            drawButton(columnUpButtons[col], "^");
+            drawButton(columnDownButtons[col], "v");
+        }
+        
+        // Draw row left/right buttons
+        for (int row = 0; row < PuzzleBoard.BOARD_SIZE; row++) {
+            drawButton(rowLeftButtons[row], "<");
+            drawButton(rowRightButtons[row], ">");
+        }
+    }
+    
+    private void drawRotateButtons() {
+        // Draw the 5 circular buttons for rotating sub-boards
+        for (int i = 0; i < rotateButtons.length; i++) {
+            Rectangle button = rotateButtons[i];
+
+            // Draw the circular texture (background)
+            game.batch.draw(circleButtonTexture, button.x, button.y, button.width, button.height);
+            
+            // Draw the rotation icon centered on the button
+            float iconSize = button.width * 0.7f; // Make icon slightly smaller than button
+            float iconX = button.x + (button.width - iconSize) / 2;
+            float iconY = button.y + (button.height - iconSize) / 2;
+            game.batch.draw(rotationIconTexture, iconX, iconY, iconSize, iconSize);
+        }
+    }
+    
     private void handleInput() {
         if (Gdx.input.justTouched()) {
             // Unproject touch coordinates to world coordinates
@@ -237,8 +426,8 @@ public class GameScreen implements Screen {
             
             // Check button clicks
             if (backButton.contains(touchX, touchY)) {
-                // Go back to menu
-                game.setScreen(new MenuScreen(game));
+                // Go back to image selection
+                game.setScreen(new ImageSelectionScreen(game, gameMode));
                 return;
             }
             
@@ -263,6 +452,17 @@ public class GameScreen implements Screen {
                 return;
             }
             
+            // Check shift mode arrow button clicks
+            if (gameMode == GameMode.SHIFT) {
+                if (handleShiftButtonClick(touchX, touchY)) {
+                    return;
+                }
+            } else if (gameMode == GameMode.ROTATE) {
+                if (handleRotateButtonClick(touchX, touchY)) {
+                    return;
+                }
+            }
+            
             // Check tile clicks (only if not animating)
             if (!puzzleBoard.isAnimating()) {
                 handleTileClick(touchX, touchY);
@@ -278,6 +478,61 @@ public class GameScreen implements Screen {
         }
     }
     
+    private boolean handleShiftButtonClick(float touchX, float touchY) {
+        ShiftPuzzleBoard shiftBoard = (ShiftPuzzleBoard) puzzleBoard;
+        
+        // Check column up buttons
+        for (int col = 0; col < PuzzleBoard.BOARD_SIZE; col++) {
+            if (columnUpButtons[col].contains(touchX, touchY)) {
+                shiftBoard.shiftColumnUp(col);
+                updateTileRenderPositions();
+                return true;
+            }
+        }
+        
+        // Check column down buttons
+        for (int col = 0; col < PuzzleBoard.BOARD_SIZE; col++) {
+            if (columnDownButtons[col].contains(touchX, touchY)) {
+                shiftBoard.shiftColumnDown(col);
+                updateTileRenderPositions();
+                return true;
+            }
+        }
+        
+        // Check row left buttons
+        for (int row = 0; row < PuzzleBoard.BOARD_SIZE; row++) {
+            if (rowLeftButtons[row].contains(touchX, touchY)) {
+                shiftBoard.shiftRowLeft(row);
+                updateTileRenderPositions();
+                return true;
+            }
+        }
+        
+        // Check row right buttons
+        for (int row = 0; row < PuzzleBoard.BOARD_SIZE; row++) {
+            if (rowRightButtons[row].contains(touchX, touchY)) {
+                shiftBoard.shiftRowRight(row);
+                updateTileRenderPositions();
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    private boolean handleRotateButtonClick(float touchX, float touchY) {
+        RotatePuzzleBoard rotateBoard = (RotatePuzzleBoard) puzzleBoard;
+
+        for (int i = 0; i < rotateButtons.length; i++) {
+            if (rotateButtons[i].contains(touchX, touchY)) {
+                rotateBoard.rotateSubBoard(i);
+                updateTileRenderPositions();
+                return true;
+            }
+        }
+        return false;
+    }
+    
     private void handleTileClick(float touchX, float touchY) {
         // Convert touch coordinates to grid coordinates
         if (touchX >= boardStartX && touchX < boardStartX + tileSize * PuzzleBoard.BOARD_SIZE &&
@@ -286,10 +541,12 @@ public class GameScreen implements Screen {
             int gridX = (int) ((touchX - boardStartX) / tileSize);
             int gridY = (int) ((touchY - boardStartY) / tileSize);
             
-            // Attempt to move the tile
-            if (puzzleBoard.moveTile(gridX, gridY)) {
-                // Tile moved successfully, update all tile render positions
-                updateTileRenderPositions();
+            if (gameMode == GameMode.CLASSIC) { // Only classic mode uses tile sliding
+                // Classic mode: attempt to move the tile
+                if (puzzleBoard.moveTile(gridX, gridY)) {
+                    // Tile moved successfully, update all tile render positions
+                    updateTileRenderPositions();
+                }
             }
         }
     }
@@ -324,6 +581,12 @@ public class GameScreen implements Screen {
         }
         if (brandLogo != null) {
             brandLogo.dispose();
+        }
+        if (circleButtonTexture != null) {
+            circleButtonTexture.dispose();
+        }
+        if (rotationIconTexture != null) {
+            rotationIconTexture.dispose();
         }
     }
 
@@ -361,11 +624,31 @@ public class GameScreen implements Screen {
             game.batch.draw(brandLogo, logoX, logoY, logoWidth, logoHeight);
         }
 
-        String instructionsText = "HOW TO PLAY:\n\n" +
-                                  "1. Click a tile adjacent to the empty space to move it.\n" +
-                                  "2. Arrange all tiles to complete the image.\n" +
-                                  "3. Use \"Reset\" to shuffle for a new game.\n" +
-                                  "4. Use \"Back\" to return to image selection.";
+        String instructionsText;
+        
+        if (gameMode == GameMode.ROTATE) {
+            instructionsText = "HOW TO PLAY (ROTATE MODE):\n\n" +
+                              "1. Click the circular rotation icon buttons to rotate the adjacent 2x2 sub-board clockwise.\n" +
+                              "2. Five overlapping 2x2 sub-boards can be rotated:\n" +
+                              "   - Top-Left, Top-Right, Bottom-Left, Bottom-Right, Center\n" +
+                              "3. Arrange all tiles to complete the image.\n" +
+                              "4. Use \"Reset\" to shuffle for a new game.\n" +
+                              "5. Use \"Back\" to return to image selection.";
+        } else if (gameMode == GameMode.SHIFT) {
+            instructionsText = "HOW TO PLAY (SHIFT MODE):\n\n" +
+                              "1. Click arrow buttons to shift entire rows or columns.\n" +
+                              "2. ^ and v buttons shift columns up/down (with wrapping).\n" +
+                              "3. < and > buttons shift rows left/right (with wrapping).\n" +
+                              "4. Arrange all tiles to complete the image.\n" +
+                              "5. Use \"Reset\" to shuffle for a new game.\n" +
+                              "6. Use \"Back\" to return to image selection.";
+        } else {
+            instructionsText = "HOW TO PLAY (CLASSIC MODE):\n\n" +
+                              "1. Click a tile adjacent to the empty space to move it.\n" +
+                              "2. Arrange all tiles to complete the image.\n" +
+                              "3. Use \"Reset\" to shuffle for a new game.\n" +
+                              "4. Use \"Back\" to return to image selection.";
+        }
         
         // Calculate text position to center it
         com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, instructionsText);

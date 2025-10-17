@@ -14,12 +14,18 @@ public class PuzzleBoard {
     public static final int BOARD_SIZE = 4;
     public static final int TOTAL_TILES = BOARD_SIZE * BOARD_SIZE;
     
-    private Tile[][] board;
-    private int emptyX, emptyY; // Position of empty space
-    private boolean isWon = false;
-    private Random random;
+    protected Tile[][] board; // Changed to protected for subclass access
+    protected int emptyX, emptyY; // Position of empty space (protected for subclasses)
+    protected boolean isWon = false; // Protected for subclasses
+    protected Random random; // Protected for subclasses
+    protected boolean hasEmptyTile; // Flag to indicate if the board has an empty tile
     
     public PuzzleBoard() {
+        this(true); // Default to classic mode with an empty tile
+    }
+
+    public PuzzleBoard(boolean hasEmptyTile) {
+        this.hasEmptyTile = hasEmptyTile;
         board = new Tile[BOARD_SIZE][BOARD_SIZE];
         random = new Random();
     }
@@ -36,9 +42,9 @@ public class PuzzleBoard {
         // Create tiles from texture regions
         for (int y = 0; y < BOARD_SIZE; y++) {
             for (int x = 0; x < BOARD_SIZE; x++) {
-                if (x == BOARD_SIZE - 1 && y == BOARD_SIZE - 1) {
-                    // Last position is empty
-                    board[x][y] = new Tile(x, y);
+                if (hasEmptyTile && x == BOARD_SIZE - 1 && y == BOARD_SIZE - 1) {
+                    // Last position is empty only if hasEmptyTile is true
+                    board[x][y] = new Tile(x, y); // Create an empty tile
                     emptyX = x;
                     emptyY = y;
                 } else {
@@ -57,28 +63,34 @@ public class PuzzleBoard {
     /**
      * Shuffle the board ensuring a solvable configuration
      */
-    private void shuffleBoard() {
-        // Create a list of all tiles except empty
+    protected void shuffleBoard() {
+        // Create a list of all tiles (all 16 if no empty tile, 15 if one empty tile)
         List<Tile> tiles = new ArrayList<>();
         for (int y = 0; y < BOARD_SIZE; y++) {
             for (int x = 0; x < BOARD_SIZE; x++) {
-                if (!board[x][y].isEmpty()) {
+                if (!hasEmptyTile || !board[x][y].isEmpty()) {
                     tiles.add(board[x][y]);
                 }
             }
         }
         
-        // Shuffle until we get a solvable configuration
-        do {
+        // Only shuffle if there's an empty tile and it's classic mode
+        if (hasEmptyTile) {
+            // Shuffle until we get a solvable configuration
+            do {
+                Collections.shuffle(tiles, random);
+            } while (!isSolvable(tiles));
+        } else {
+            // For modes without empty tile, a simple shuffle is sufficient
             Collections.shuffle(tiles, random);
-        } while (!isSolvable(tiles));
+        }
         
         // Place shuffled tiles back on board
         int tileIndex = 0;
         for (int y = 0; y < BOARD_SIZE; y++) {
             for (int x = 0; x < BOARD_SIZE; x++) {
-                if (x == emptyX && y == emptyY) {
-                    continue; // Skip empty position
+                if (hasEmptyTile && x == emptyX && y == emptyY) {
+                    continue; // Skip empty position if present
                 }
                 
                 Tile tile = tiles.get(tileIndex++);
@@ -93,7 +105,11 @@ public class PuzzleBoard {
     /**
      * Check if a tile configuration is solvable using inversion count
      */
-    private boolean isSolvable(List<Tile> tiles) {
+    protected boolean isSolvable(List<Tile> tiles) {
+        if (!hasEmptyTile) {
+            return true; // No empty tile, so traditional solvability isn't a concern
+        }
+
         int inversions = 0;
         
         // Count inversions
@@ -118,9 +134,13 @@ public class PuzzleBoard {
     }
     
     /**
-     * Attempt to move a tile at the given position
+     * Attempt to move a tile at the given position (only for classic mode)
      */
     public boolean moveTile(int x, int y) {
+        if (!hasEmptyTile) {
+            return false; // Moving individual tiles is only for classic mode
+        }
+
         if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) {
             return false;
         }
@@ -134,7 +154,7 @@ public class PuzzleBoard {
         if (isAdjacentToEmpty(x, y)) {
             // Swap tile with empty space
             board[emptyX][emptyY] = tile;
-            board[x][y] = new Tile(x, y); // New empty tile
+            board[x][y] = new Tile(emptyX, emptyY); // New empty tile at old empty position
             
             tile.setGridPosition(emptyX, emptyY);
             emptyX = x;
@@ -150,9 +170,12 @@ public class PuzzleBoard {
     }
     
     /**
-     * Check if position is adjacent to empty space
+     * Check if position is adjacent to empty space (only for classic mode)
      */
     private boolean isAdjacentToEmpty(int x, int y) {
+        if (!hasEmptyTile) {
+            return false; // Not applicable for boards without an empty tile
+        }
         int dx = Math.abs(x - emptyX);
         int dy = Math.abs(y - emptyY);
         
@@ -163,12 +186,14 @@ public class PuzzleBoard {
     /**
      * Check if puzzle is solved
      */
-    private void checkWinCondition() {
+    protected void checkWinCondition() {
         isWon = true;
         
         for (int y = 0; y < BOARD_SIZE; y++) {
             for (int x = 0; x < BOARD_SIZE; x++) {
                 Tile tile = board[x][y];
+                // For boards with empty tile, empty tile must also be in correct position
+                // For boards without empty tile, all 16 tiles must be in correct position
                 if (!tile.isInCorrectPosition()) {
                     isWon = false;
                     return;

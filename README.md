@@ -1,23 +1,47 @@
 # Tile Shifter Puzzle Game
 
-A classic 15-puzzle sliding tile game built with LibGDX framework in Java. Players slide tiles in a 4x4 grid to complete beautiful images.
+A feature-rich puzzle game built with LibGDX framework in Java. Players can choose from three different game modes to solve 4x4 grid puzzles with beautiful images.
 
 ## Features
 
-- **4x4 Grid Puzzle**: Classic sliding puzzle with 15 tiles and 1 empty space
+- **Three Game Modes**: Classic sliding puzzle, Rotate mode, and Shift mode
+- **4x4 Grid Puzzle**: 16 tiles arranged in various challenging configurations
 - **Multiple Images**: Choose from several beautiful album cover images
-- **Smart Shuffle**: Ensures every puzzle is solvable using inversion counting algorithm
-- **Smooth Animations**: Tiles slide smoothly when moved
+- **Smart Shuffle**: Mode-specific shuffling ensures solvable puzzles
+- **Intuitive UI**: Mode-specific visual indicators and controls
+- **Help System**: Full image preview and mode-specific instructions
 - **Win Detection**: Automatic detection when puzzle is solved
 - **Cross-Platform**: Runs on desktop (Windows, Mac, Linux)
 
-## Game Mechanics
+## Game Modes
 
+### Classic Mode
+The traditional 15-puzzle sliding tile game:
 - Click/tap on a tile adjacent to the empty space to move it
 - Only tiles horizontally or vertically adjacent to the empty space can move
 - Complete the puzzle by arranging all tiles in the correct order
-- Use the Reset button to shuffle the puzzle again
-- Use the Back button to return to image selection
+
+### Rotate Mode
+Rotate 2x2 sub-boards to solve the puzzle:
+- Click any tile within a 2x2 sub-board to rotate it clockwise
+- Five overlapping 2x2 sub-boards can be rotated:
+  - Top-Left, Top-Right, Bottom-Left, Bottom-Right, and Center
+- Yellow borders indicate the rotatable sub-boards
+- No empty space - all 16 tiles are visible
+
+### Shift Mode
+Shift entire rows and columns cyclically:
+- Click arrow buttons (^ v < >) to shift columns/rows
+- Tiles wrap around when shifted (top tile goes to bottom, etc.)
+- No empty space - all 16 tiles are visible
+- Strategic shifting of multiple rows/columns needed to solve
+
+## Common Controls
+
+- **Reset button**: Shuffle the puzzle for a new game
+- **Back button**: Return to image selection
+- **Help button**: View the complete puzzle image
+- **Instructions button**: View mode-specific game instructions
 
 ## How to Build and Run
 
@@ -59,20 +83,25 @@ cd desktop
 
 ```
 tile-shifter/
-├── core/                          # Core game logic (platform-independent)
+├── core/                                    # Core game logic (platform-independent)
 │   └── src/com/tileshifter/
-│       ├── TileShiftGame.java     # Main game class
-│       ├── Tile.java              # Individual tile representation
-│       ├── PuzzleBoard.java       # Board logic and tile movement
+│       ├── TileShiftGame.java               # Main game class
+│       ├── GameMode.java                    # Game mode enumeration
+│       ├── Tile.java                        # Individual tile representation
+│       ├── PuzzleBoard.java                 # Base board logic (Classic mode)
+│       ├── RotatePuzzleBoard.java           # Rotate mode logic
+│       ├── ShiftPuzzleBoard.java            # Shift mode logic
 │       └── screens/
-│           ├── MenuScreen.java    # Image selection screen
-│           └── GameScreen.java    # Main gameplay screen
-├── desktop/                       # Desktop launcher
+│           ├── ModeSelectionScreen.java     # Game mode selection screen
+│           ├── ImageSelectionScreen.java    # Image selection screen
+│           └── GameScreen.java              # Main gameplay screen
+├── desktop/                                 # Desktop launcher
 │   └── src/com/tileshifter/
-│       └── DesktopLauncher.java   # Desktop application entry point
+│       └── DesktopLauncher.java             # Desktop application entry point
 ├── assets/
-│   └── images/                    # Puzzle images (JPG format)
-└── build.gradle                   # Build configuration
+│   ├── images/                              # Puzzle images (JPG format)
+│   └── fonts/                               # Font files (TTF format)
+└── build.gradle                             # Build configuration
 ```
 
 ## Technical Details
@@ -80,9 +109,13 @@ tile-shifter/
 - **Framework**: LibGDX 1.12.1
 - **Language**: Java 8+
 - **Graphics**: SpriteBatch rendering with TextureRegions
-- **Input**: Touch/mouse input handling for both desktop and mobile
-- **Algorithm**: Solvable shuffle using inversion counting for 4x4 grids
-- **Animation**: Smooth tile movement with configurable speed
+- **Input**: Touch/mouse input handling with viewport coordinate projection
+- **Fonts**: FreeType font generation with mipmaps for smooth scaling
+- **Algorithms**: 
+  - Classic Mode: Solvable shuffle using inversion counting for 4x4 grids
+  - Rotate Mode: Random rotations of 5 overlapping 2x2 sub-boards
+  - Shift Mode: Random cyclic shifts of rows and columns
+- **Architecture**: Polymorphic board classes (PuzzleBoard, RotatePuzzleBoard, ShiftPuzzleBoard)
 
 ## Adding New Images
 

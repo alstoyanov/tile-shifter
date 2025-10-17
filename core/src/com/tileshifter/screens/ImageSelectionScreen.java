@@ -9,23 +9,26 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
+import com.tileshifter.GameMode;
 import com.tileshifter.TileShiftGame;
 
 /**
- * Menu screen for selecting puzzle images
+ * Screen for selecting puzzle images after choosing a game mode
  */
-public class MenuScreen implements Screen {
+public class ImageSelectionScreen implements Screen {
     private TileShiftGame game;
+    private GameMode gameMode;
     private Array<String> imageFiles;
     private Array<Texture> thumbnails;
     private Array<Rectangle> imageButtons;
-    // private Texture brandLogo; // Removed: No longer displayed on MenuScreen
+    private Rectangle backButton;
     
     private static final float THUMBNAIL_SIZE = 120f;
     private static final float PADDING = 20f;
     
-    public MenuScreen(TileShiftGame game) {
+    public ImageSelectionScreen(TileShiftGame game, GameMode gameMode) {
         this.game = game;
+        this.gameMode = gameMode;
         loadImageFiles();
         createThumbnails();
         setupButtons();
@@ -55,7 +58,7 @@ public class MenuScreen implements Screen {
                 Texture texture = new Texture(Gdx.files.internal("images/" + filename));
                 thumbnails.add(texture);
             } catch (Exception e) {
-                Gdx.app.error("MenuScreen", "Failed to load image: " + filename, e);
+                Gdx.app.error("ImageSelectionScreen", "Failed to load image: " + filename, e);
             }
         }
     }
@@ -63,8 +66,11 @@ public class MenuScreen implements Screen {
     private void setupButtons() {
         imageButtons = new Array<>();
         
+        // Back button
+        backButton = new Rectangle(20, TileShiftGame.VIRTUAL_HEIGHT - 60, 100, 40);
+        
         float startX = 50f;
-        float startY = TileShiftGame.VIRTUAL_HEIGHT - 300f; // Adjusted further down to ensure no overlap
+        float startY = TileShiftGame.VIRTUAL_HEIGHT - 300f;
         float currentX = startX;
         float currentY = startY;
         
@@ -86,7 +92,6 @@ public class MenuScreen implements Screen {
     @Override
     public void show() {
         // Called when this screen becomes the current screen
-        // brandLogo = new Texture(Gdx.files.internal("images/Mytholore.jpg")); // Removed: No longer loaded here
     }
     
     @Override
@@ -96,17 +101,17 @@ public class MenuScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         
         game.batch.begin();
-        
-        // Draw brand logo at a prominent position (removed)
-        // if (brandLogo != null) {
-        //     game.batch.draw(brandLogo, 
-        //                     TileShiftGame.VIRTUAL_WIDTH - brandLogo.getWidth() - 20, 
-        //                     TileShiftGame.VIRTUAL_HEIGHT - brandLogo.getHeight() - 20,
-        //                     brandLogo.getWidth() / 2, brandLogo.getHeight() / 2); // Scale down
-        // }
 
-        // Draw title
-        game.font.draw(game.batch, "Tile Shifter Puzzle", 50, TileShiftGame.VIRTUAL_HEIGHT - 50);
+        // Draw back button
+        com.badlogic.gdx.graphics.g2d.GlyphLayout backLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, "< Back");
+        game.font.draw(game.batch, "< Back", 
+            backButton.x + backButton.width / 2 - backLayout.width / 2,
+            backButton.y + backButton.height / 2 + backLayout.height / 2);
+
+        // Draw title with game mode
+        String modeText = gameMode == GameMode.CLASSIC ? "Classic Mode" : 
+                         gameMode == GameMode.ROTATE ? "Rotate Mode" : "Shift Mode";
+        game.font.draw(game.batch, "Tile Shifter Puzzle - " + modeText, 50, TileShiftGame.VIRTUAL_HEIGHT - 50);
         game.font.draw(game.batch, "Select an image to start:", 50, TileShiftGame.VIRTUAL_HEIGHT - 80);
         
         // Draw thumbnails
@@ -131,9 +136,6 @@ public class MenuScreen implements Screen {
             float drawY = button.y + (THUMBNAIL_SIZE - drawHeight) / 2;
             
             game.batch.draw(thumbnail, drawX, drawY, drawWidth, drawHeight);
-            
-            // Draw filename below thumbnail (removed)
-            // game.font.draw(game.batch, imageFiles.get(i), button.x, button.y - 10);
         }
         
         game.batch.end();
@@ -151,12 +153,19 @@ public class MenuScreen implements Screen {
             float touchX = touchPoint.x;
             float touchY = touchPoint.y;
             
+            // Check back button
+            if (backButton.contains(touchX, touchY)) {
+                game.setScreen(new ModeSelectionScreen(game));
+                return;
+            }
+            
+            // Check image selection
             for (int i = 0; i < imageButtons.size; i++) {
                 Rectangle button = imageButtons.get(i);
                 if (button.contains(touchX, touchY)) {
-                    // Start game with selected image
+                    // Start game with selected image and mode
                     String selectedImage = imageFiles.get(i);
-                    game.setScreen(new GameScreen(game, selectedImage));
+                    game.setScreen(new GameScreen(game, selectedImage, gameMode));
                     break;
                 }
             }
@@ -189,8 +198,6 @@ public class MenuScreen implements Screen {
         for (Texture thumbnail : thumbnails) {
             thumbnail.dispose();
         }
-        // if (brandLogo != null) { // Removed: No longer disposed here
-        //     brandLogo.dispose();
-        // }
     }
 }
+

@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.badlogic.gdx.utils.viewport.FitViewport; // Using FitViewport to maintain aspect ratio
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.tileshifter.screens.MenuScreen;
+import com.tileshifter.screens.ModeSelectionScreen;
 
 /**
  * Main game class for Tile Shifter puzzle game
@@ -47,8 +47,8 @@ public class TileShiftGame extends Game {
         font = generator.generateFont(parameter); // Generates a clean BitmapFont
         generator.dispose(); // Dispose the generator to avoid memory leaks
         
-        // Start with the menu screen
-        setScreen(new MenuScreen(this));
+        // Start with the mode selection screen
+        setScreen(new ModeSelectionScreen(this));
     }
     
     @Override

@@ -20,30 +20,27 @@ public class Tile {
     private static final float ANIMATION_SPEED = 8.0f;
     private boolean isAnimating = false;
     
-    public Tile(TextureRegion textureRegion, int correctX, int correctY, int tileId) {
+    public Tile(TextureRegion textureRegion, int correctX, int correctY, int tileId, boolean isEmpty) {
         this.textureRegion = textureRegion;
         this.correctX = correctX;
         this.correctY = correctY;
         this.currentX = correctX;
         this.currentY = correctY;
-        this.tileId = tileId;
-        this.isEmpty = false;
+        this.tileId = isEmpty ? -1 : tileId; // -1 for empty tile
+        this.isEmpty = isEmpty;
         
         this.renderPosition = new Vector2();
         this.targetPosition = new Vector2();
     }
+
+    // Old constructor for non-empty tiles - now calls the new unified constructor
+    public Tile(TextureRegion textureRegion, int correctX, int correctY, int tileId) {
+        this(textureRegion, correctX, correctY, tileId, false);
+    }
     
-    // Constructor for empty tile
+    // Old constructor for empty tile - now calls the new unified constructor
     public Tile(int correctX, int correctY) {
-        this.correctX = correctX;
-        this.correctY = correctY;
-        this.currentX = correctX;
-        this.currentY = correctY;
-        this.isEmpty = true;
-        this.tileId = -1; // Special ID for empty tile
-        
-        this.renderPosition = new Vector2();
-        this.targetPosition = new Vector2();
+        this(null, correctX, correctY, -1, true);
     }
     
     public void updateAnimation(float deltaTime) {
