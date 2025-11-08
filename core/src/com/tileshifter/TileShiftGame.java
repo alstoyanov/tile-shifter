@@ -34,7 +34,7 @@ public class TileShiftGame extends Game {
         viewport.apply(true);
 
         // Generate font from a TTF file
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Roboto-Regular.ttf"));
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/fonts/Roboto-Regular.ttf"));
         FreeTypeFontParameter parameter = new FreeTypeFontParameter();
         parameter.size = 24; // Font size
         parameter.shadowOffsetX = 1;
@@ -68,7 +68,7 @@ public class TileShiftGame extends Game {
         // Render current screen
         super.render();
     }
-
+    
     @Override
     public void resize(int width, int height) {
         // Update the viewport when the screen is resized

@@ -23,7 +23,7 @@ public class GameScreen implements Screen {
     private GameMode gameMode;
     private PuzzleBoard puzzleBoard;
     private Texture puzzleTexture;
-    private Texture brandLogo; // New: To display Mytholore.jpg on instructions screen
+    private Texture brandLogo; // To display Mytholore.jpg on instructions screen
     
     // UI elements
     private Rectangle backButton;
@@ -72,10 +72,10 @@ public class GameScreen implements Screen {
         this.gameMode = gameMode;
         
         // Load the puzzle image
-        puzzleTexture = new Texture(Gdx.files.internal("images/" + imageName));
+        puzzleTexture = new Texture(Gdx.files.internal("assets/images/" + imageName));
 
         // Load the brand logo for the instructions screen
-        brandLogo = new Texture(Gdx.files.internal("images/Mytholore.jpg"));
+        brandLogo = new Texture(Gdx.files.internal("assets/images/Mytholore.jpg"));
         
         // Initialize ShapeRenderer and solidBackgroundTexture
         shapeRenderer = new ShapeRenderer();
@@ -792,7 +792,7 @@ public class GameScreen implements Screen {
         com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(game.font, instructionsText);
         float textX = TileShiftGame.VIRTUAL_WIDTH / 2 - layout.width / 2;
         float textY = TileShiftGame.VIRTUAL_HEIGHT - 200 - layout.height / 2; // Adjusted text position lower
-
+        
         game.font.draw(game.batch, instructionsText, textX, textY);
         game.batch.end(); // End batch for overlay
     }

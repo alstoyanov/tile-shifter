@@ -1,6 +1,5 @@
 sourceCompatibility = 1.8
 sourceSets.main.java.srcDirs = [ "src/" ]
-sourceSets.main.resources.srcDirs = ["../assets"]
 
 project.ext.mainClassName = "com.tileshifter.DesktopLauncher"
 project.ext.assetsDir = new File("../assets")
@@ -9,7 +8,7 @@ task run(dependsOn: classes, type: JavaExec) {
     mainClass = project.mainClassName
     classpath = sourceSets.main.runtimeClasspath
     standardInput = System.in
-    workingDir = project.assetsDir
+    workingDir = project.file(".").absolutePath // Set working directory to project root
     ignoreExitValue = true
 
     if (System.getProperty("os.name").toLowerCase().contains("mac")) {
@@ -22,23 +21,42 @@ task debug(dependsOn: classes, type: JavaExec) {
     mainClass = project.mainClassName
     classpath = sourceSets.main.runtimeClasspath
     standardInput = System.in
-    workingDir = project.assetsDir
+    workingDir = project.file(".").absolutePath // Set working directory to project root
     ignoreExitValue = true
     debug = true
 }
 
 task dist(type: Jar) {
-    duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+    archiveBaseName = 'desktop'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
     manifest {
         attributes 'Main-Class': project.mainClassName
     }
-    dependsOn configurations.runtimeClasspath
+    
+    // Include compiled classes from desktop project
+    from sourceSets.main.output
+    
+    // Include compiled classes from core project
+    from { project(':core').sourceSets.main.output }
+    
+    // Include all runtime dependencies (LibGDX, etc.)
+    // Only include files that actually exist
     from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+        configurations.runtimeClasspath.findAll { it.exists() }.collect { 
+            it.isDirectory() ? it : zipTree(it) 
+        }
     }
-    with jar
+}
+
+dependencies {
+    implementation project(':core') // Ensure desktop depends on core project
+    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+    implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+    implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop" // Required for FreeType fonts
 }
 
 dist.dependsOn classes
+dist.dependsOn ':core:classes'
 
 eclipse.project.name = appName + "-desktop"

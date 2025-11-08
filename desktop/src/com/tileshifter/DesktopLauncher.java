@@ -14,7 +14,7 @@ public class DesktopLauncher {
         config.setTitle("Tile Shifter Puzzle");
         config.setWindowedMode(800, 600);
         config.setResizable(true);
-        config.setWindowIcon(FileType.Internal, "images/Mytholore.jpg"); // Set game icon
+        config.setWindowIcon(FileType.Internal, "assets/images/Mytholore.jpg"); // Corrected icon path
         
         new Lwjgl3Application(new TileShiftGame(), config);
     }

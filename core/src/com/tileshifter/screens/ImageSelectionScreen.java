@@ -58,7 +58,8 @@ public class ImageSelectionScreen implements Screen {
         imageFiles = new Array<>();
         
         // Get all JPG files from assets/images
-        FileHandle imagesDir = Gdx.files.internal("images");
+        FileHandle imagesDir = Gdx.files.internal("assets/images");
+        System.out.println("Images directory path: " + imagesDir.file().getAbsolutePath());
         if (imagesDir.exists()) {
             for (FileHandle file : imagesDir.list()) {
                 if ((file.extension().equalsIgnoreCase("jpg") || 
@@ -75,10 +76,10 @@ public class ImageSelectionScreen implements Screen {
         
         for (String filename : imageFiles) {
             try {
-                Texture texture = new Texture(Gdx.files.internal("images/" + filename));
+                Texture texture = new Texture(Gdx.files.internal("assets/images/" + filename));
                 thumbnails.add(texture);
             } catch (Exception e) {
-                Gdx.app.error("ImageSelectionScreen", "Failed to load image: " + filename, e);
+                Gdx.app.error("ImageSelectionScreen", "Failed to load image: " + filename + " (Full path: " + Gdx.files.internal("assets/images/" + filename).path() + ")", e);
             }
         }
     }
